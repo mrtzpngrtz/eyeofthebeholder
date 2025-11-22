@@ -12,6 +12,8 @@
   "dependencies": {
     "express": "^5.1.0",
     "http-proxy": "^1.18.1",
-    "http-proxy-middleware": "^3.0.5"
+    "http-proxy-middleware": "^3.0.5",
+    "node-osc": "^11.0.0",
+    "socket.io": "^4.8.1"
   }
 }

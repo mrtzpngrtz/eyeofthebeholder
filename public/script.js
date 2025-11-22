@@ -1,8 +1,14 @@
 const COMFY_API = ''; // Relative path to use proxy
 let clientId = crypto.randomUUID();
 let ws;
+let socket; // Socket.io
 let isProcessing = false;
 let needsUpdate = false;
+let pollingInterval = 0;
+let lastPromptTime = 0;
+// Store current normalized coordinates (0-1)
+let oscX = 0.5;
+let oscY = 0.5;
 
 // Expression Editor Parameters Mapping
 // Updated based on actual node definition
@@ -28,62 +34,26 @@ const EXPRESSION_PARAMS = [
 ];
 
 // Load the workflow template
-let workflowTemplate = {
-  "32": {
-    "inputs": {
-      "images": [
-        "14",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "PreviewImage"
-    }
-  },
-  "15": {
-    "inputs": {
-      "image": "example.png"
-    },
-    "class_type": "LoadImage",
-    "_meta": {
-      "title": "LoadImage"
-    }
-  },
-  "14": {
-    "inputs": {
-      "rotate_pitch": 0,
-      "rotate_yaw": 0,
-      "rotate_roll": 0,
-      "blink": 0,
-      "eyebrow": 0,
-      "wink": 0,
-      "pupil_x": 0,
-      "pupil_y": 0,
-      "aaa": 0,
-      "eee": 0,
-      "woo": 0,
-      "smile": 0,
-      "src_ratio": 1,
-      "sample_ratio": 1,
-      "crop_factor": 1.5,
-      "src_image": [
-        "15",
-        0
-      ]
-    },
-    "class_type": "ExpressionEditor",
-    "_meta": {
-      "title": "ExpressionEditor"
-    }
-  }
-};
+let workflowTemplate = null;
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadWorkflowTemplate();
     initSliders();
     setupWebSocket();
+    setupSocketIO();
     setupEventListeners();
 });
+
+async function loadWorkflowTemplate() {
+    try {
+        const response = await fetch('workflow.json');
+        if (!response.ok) throw new Error('Failed to load workflow template');
+        workflowTemplate = await response.json();
+    } catch (error) {
+        console.error('Error loading workflow:', error);
+        updateStatus('Error loading workflow template', 'error');
+    }
+}
 
 function initSliders() {
     const container = document.getElementById('slidersContainer');
@@ -155,7 +125,8 @@ function setupWebSocket() {
                 const images = message.data.output.images;
                 if (images && images.length > 0) {
                     const img = images[0];
-                    const imageUrl = `${COMFY_API}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder}`;
+                    // Add timestamp to force reload if filename is static
+                    const imageUrl = `${COMFY_API}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder}&t=${Date.now()}`;
                     document.getElementById('resultImage').src = imageUrl;
                 }
             }
@@ -168,7 +139,93 @@ function setupWebSocket() {
     };
 }
 
+function setupSocketIO() {
+    socket = io();
+    
+    socket.on('connect', () => {
+        console.log('Connected to Socket.io for OSC');
+        const status = document.getElementById('oscConnection');
+        if (status) {
+            status.textContent = 'Connected';
+            status.style.color = '#4caf50';
+        }
+    });
+
+    socket.on('disconnect', () => {
+        const status = document.getElementById('oscConnection');
+        if (status) {
+            status.textContent = 'Disconnected';
+            status.style.color = '#ff6b6b';
+        }
+    });
+
+    socket.on('osc_message', (msg) => {
+        // Flash activity
+        const indicator = document.getElementById('oscActivity');
+        if (indicator) {
+            indicator.style.background = '#00ff00';
+            setTimeout(() => {
+                indicator.style.background = '#333';
+            }, 100);
+        }
+
+        // Handle TouchDesigner style: separate messages for /x and /y
+        // msg format: [address, val]
+        
+        const address = msg[0];
+        let value = msg.length > 1 ? msg[1] : null;
+
+        // Update X
+        if (address.endsWith('/x') || address === 'x') {
+            if (typeof value === 'number') {
+                oscX = value;
+                updateFromOsc();
+            }
+        } 
+        // Update Y
+        else if (address.endsWith('/y') || address === 'y') {
+            if (typeof value === 'number') {
+                oscY = value;
+                updateFromOsc();
+            }
+        }
+        // Handle bundled format: ['/pos', x, y]
+        else if (msg.length >= 3) {
+            const x = msg[1];
+            const y = msg[2];
+            if (typeof x === 'number' && typeof y === 'number') {
+                oscX = x;
+                oscY = y;
+                updateFromOsc();
+            }
+        }
+    });
+}
+
+function updateFromOsc() {
+    // Update Debug Display
+    const debugVal = document.getElementById('oscValues');
+    if (debugVal) {
+        debugVal.textContent = `X: ${oscX.toFixed(3)} | Y: ${oscY.toFixed(3)}`;
+    }
+
+    // Map normalized (0-1) to screen coordinates
+    const screenX = oscX * window.innerWidth;
+    const screenY = oscY * window.innerHeight;
+    
+    updateTargetPosition(screenX, screenY);
+    updateGazeParams(screenX, screenY);
+}
+
 function setupEventListeners() {
+    const pollingRateInput = document.getElementById('pollingRate');
+    if (pollingRateInput) {
+        pollingRateInput.addEventListener('input', (e) => {
+            pollingInterval = parseInt(e.target.value);
+            document.getElementById('pollingVal').textContent = pollingInterval;
+        });
+    }
+
     const imageInput = document.getElementById('imageInput');
     const generateBtn = document.getElementById('generateBtn');
 
@@ -572,12 +629,25 @@ function processQueue() {
     if (!needsUpdate) return;
     if (!window.uploadedFilename) return;
     
+    const now = Date.now();
+    if (now - lastPromptTime < pollingInterval) {
+        // Wait remaining time
+        setTimeout(processQueue, pollingInterval - (now - lastPromptTime));
+        return;
+    }
+
     needsUpdate = false;
     isProcessing = true;
+    lastPromptTime = now;
     queuePrompt(true);
 }
 
 async function queuePrompt(isAuto = false) {
+    if (!workflowTemplate) {
+        updateStatus('Workflow template not loaded', 'error');
+        return;
+    }
+
     if (!window.uploadedFilename) {
         if (!isAuto) alert('Please upload an image first');
         return;

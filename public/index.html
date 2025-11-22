@@ -33,6 +33,14 @@
                 <input type="file" id="imageInput" accept="image/*">
             </div>
 
+            <div class="input-group" style="margin-top: 10px;">
+                <label style="display: flex; justify-content: space-between; color: #aaa; font-size: 0.7em;">
+                    POLLING RATE (ms) <span id="pollingVal">0</span>
+                </label>
+                <input type="range" id="pollingRate" min="0" max="2000" step="50" value="0" style="width:100%">
+                <div style="font-size: 0.6em; color: #666;">0 = Max Speed</div>
+            </div>
+
             <!-- Expression Buttons -->
             <div class="expression-actions">
                 <button id="winkBtn" class="expression-btn">WINK</button>
@@ -51,9 +59,23 @@
             </div>
             
             <div id="status" class="status">Ready</div>
+            
+            <!-- OSC Debug Info -->
+            <div class="osc-status" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #333; font-size: 0.7em; color: #888;">
+                <div style="display:flex; justify-content:space-between;">
+                    <span>OSC Status:</span>
+                    <span id="oscConnection" style="color: #666;">Disconnected</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-top: 5px;">
+                    <span>Last Input:</span>
+                    <span id="oscValues">X: - | Y: -</span>
+                </div>
+                <div id="oscActivity" style="width: 10px; height: 10px; background: #333; border-radius: 50%; margin-top: 5px; align-self: flex-end;"></div>
+            </div>
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

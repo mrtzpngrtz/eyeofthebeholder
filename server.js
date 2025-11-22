@@ -1,10 +1,18 @@
 const express = require('express');
 const httpProxy = require('http-proxy');
 const path = require('path');
+const { Server } = require('socket.io');
+const { Server: OscServer } = require('node-osc');
 
 const app = express();
 const PORT = 3000;
+const OSC_PORT = 3333;
 const COMFY_API = 'http://127.0.0.1:8188';
+
+// OSC Server
+const oscServer = new OscServer(OSC_PORT, '0.0.0.0', () => {
+    console.log(`OSC Server listening on port ${OSC_PORT}`);
+});
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
@@ -67,12 +75,32 @@ const server = app.listen(PORT, () => {
     console.log(`Proxying to ComfyUI at ${COMFY_API}`);
 });
 
-// Handle WebSocket upgrades
+// Socket.io setup
+const io = new Server(server);
+
+io.on('connection', (socket) => {
+    console.log('Client connected to Socket.io');
+});
+
+// Forward OSC messages to Socket.io
+oscServer.on('message', (msg) => {
+    console.log('OSC Message received:', msg);
+    io.emit('osc_message', msg);
+});
+
+oscServer.on('bundle', (bundle) => {
+    console.log('OSC Bundle received');
+    bundle.elements.forEach((element) => {
+        console.log('Bundle Element:', element);
+        io.emit('osc_message', element);
+    });
+});
+
+// Handle WebSocket upgrades for ComfyUI Proxy
 server.on('upgrade', (req, socket, head) => {
     if (req.url.startsWith('/ws')) {
         console.log('Upgrading WebSocket connection...');
         proxy.ws(req, socket, head);
-    } else {
-        socket.destroy();
-    }
+    } 
+    // Note: Socket.io handles its own upgrades automatically on other paths
 });

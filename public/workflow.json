@@ -1,0 +1,64 @@
+{
+  "15": {
+    "inputs": {
+      "image": "example.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "LoadImage"
+    }
+  },
+  "14": {
+    "inputs": {
+      "rotate_pitch": 0,
+      "rotate_yaw": 0,
+      "rotate_roll": 0,
+      "blink": 0,
+      "eyebrow": 0,
+      "wink": 0,
+      "pupil_x": 0,
+      "pupil_y": 0,
+      "aaa": 0,
+      "eee": 0,
+      "woo": 0,
+      "smile": 0,
+      "src_ratio": 1,
+      "sample_ratio": 1,
+      "crop_factor": 1.5,
+      "src_image": [
+        "15",
+        0
+      ]
+    },
+    "class_type": "ExpressionEditor",
+    "_meta": {
+      "title": "ExpressionEditor"
+    }
+  },
+  "33": {
+    "inputs": {
+      "anything": [
+        "14",
+        0
+      ],
+      "folder_path": "E:\\ComfyuiStandalone_2025\\ComfyUI\\temp",
+      "enabled": true
+    },
+    "class_type": "TempCleaner",
+    "_meta": {
+      "title": "TempCleaner"
+    }
+  },
+  "32": {
+    "inputs": {
+      "images": [
+        "33",
+        0
+      ]
+    },
+    "class_type": "PreviewImage",
+    "_meta": {
+      "title": "PreviewImage"
+    }
+  }
+}

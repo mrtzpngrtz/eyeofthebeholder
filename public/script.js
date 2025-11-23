@@ -4,7 +4,7 @@ let ws;
 let socket; // Socket.io
 let isProcessing = false;
 let needsUpdate = false;
-let pollingInterval = 0;
+let pollingInterval = 100; // Default to 100ms to be safe
 let lastPromptTime = 0;
 // Store current normalized coordinates (0-1)
 let oscX = 0.5;
@@ -46,7 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function loadWorkflowTemplate() {
     try {
-        const response = await fetch('workflow.json');
+        // Add timestamp to prevent caching
+        const response = await fetch(`workflow.json?t=${Date.now()}`);
         if (!response.ok) throw new Error('Failed to load workflow template');
         workflowTemplate = await response.json();
     } catch (error) {
@@ -118,7 +119,8 @@ function setupWebSocket() {
                 updateStatus('Generation Complete');
                 setLoading(false);
                 isProcessing = false;
-                processQueue(); // Check if there's a pending update
+                // Add a small mandatory cooldown to prevent socket exhaustion
+                setTimeout(processQueue, 50); 
             }
         } else if (message.type === 'executed') {
             if (message.data.node === '32') { // PreviewImage node ID
@@ -220,14 +222,31 @@ function updateFromOsc() {
 function setupEventListeners() {
     const pollingRateInput = document.getElementById('pollingRate');
     if (pollingRateInput) {
+        // Set initial value to match safe default
+        pollingRateInput.value = Math.max(pollingInterval, parseInt(pollingRateInput.value));
+        document.getElementById('pollingVal').textContent = pollingInterval;
+        
         pollingRateInput.addEventListener('input', (e) => {
-            pollingInterval = parseInt(e.target.value);
+            // Enforce minimum limit to prevent port exhaustion
+            let val = parseInt(e.target.value);
+            if (val < 50) val = 50; 
+            pollingInterval = val;
             document.getElementById('pollingVal').textContent = pollingInterval;
         });
     }
 
     const imageInput = document.getElementById('imageInput');
     const generateBtn = document.getElementById('generateBtn');
+    const trackingToggle = document.getElementById('trackingToggle');
+
+    if (trackingToggle) {
+        trackingToggle.addEventListener('change', (e) => {
+            const cursor = document.getElementById('customCursor');
+            if (cursor) {
+                cursor.style.display = e.target.checked ? 'block' : 'none';
+            }
+        });
+    }
 
     imageInput.addEventListener('change', handleImageUpload);
     generateBtn.addEventListener('click', () => queuePrompt(false));
@@ -630,9 +649,9 @@ function processQueue() {
     if (!window.uploadedFilename) return;
     
     const now = Date.now();
+    // Double check we aren't going too fast (redundant safety)
     if (now - lastPromptTime < pollingInterval) {
-        // Wait remaining time
-        setTimeout(processQueue, pollingInterval - (now - lastPromptTime));
+        setTimeout(processQueue, Math.max(50, pollingInterval - (now - lastPromptTime)));
         return;
     }
 
@@ -691,9 +710,15 @@ async function queuePrompt(isAuto = false) {
         // Status update handled by WS or subsequent steps
     } catch (error) {
         console.error('Error:', error);
-        updateStatus('Error generating image', 'error');
+        updateStatus('Error generating image. Retrying...', 'error');
         setLoading(false);
-        isProcessing = false; // Reset flag on error
+        isProcessing = false; 
+        
+        // Backoff on error to prevent request flooding
+        setTimeout(() => {
+            needsUpdate = true; // Ensure we try again
+            processQueue();
+        }, 1000);
     }
 }
 

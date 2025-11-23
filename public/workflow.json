@@ -35,24 +35,10 @@
       "title": "ExpressionEditor"
     }
   },
-  "33": {
-    "inputs": {
-      "anything": [
-        "14",
-        0
-      ],
-      "folder_path": "E:\\ComfyuiStandalone_2025\\ComfyUI\\temp",
-      "enabled": true
-    },
-    "class_type": "TempCleaner",
-    "_meta": {
-      "title": "TempCleaner"
-    }
-  },
   "32": {
     "inputs": {
       "images": [
-        "33",
+        "14",
         0
       ]
     },

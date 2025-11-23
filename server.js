@@ -25,7 +25,10 @@ async function cleanTempFolder() {
                     await fs.promises.unlink(filePath);
                 }
             } catch (e) {
-                console.error(e);
+                // Ignore EBUSY errors as the file might be locked by ComfyUI
+                if (e.code !== 'EBUSY') {
+                    console.error('Error processing/deleting file:', file, e);
+                }
             }
         }));
         // console.log('Cleaned temp folder'); 

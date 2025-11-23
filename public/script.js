@@ -12,7 +12,7 @@ let isProcessing = false;
 let needsUpdate = false;
 let pollingInterval = 100; // Default to 100ms to be safe
 let lastPromptTime = 0;
-let inputMode = 'mouse'; // 'mouse', 'osc', or 'random'
+let inputMode = 'mouse'; // 'mouse' (drag), 'hover', 'osc', or 'random'
 
 // Store current normalized coordinates (0-1)
 let oscX = 0.5;
@@ -285,6 +285,13 @@ function setupEventListeners() {
                 inputMode = e.target.value;
                 console.log('Input mode switched to:', inputMode);
                 
+                // Update cursor interactivity
+                const cursor = document.getElementById('customCursor');
+                if (cursor) {
+                    // Only allow dragging in 'mouse' (drag) mode
+                    cursor.style.pointerEvents = inputMode === 'mouse' ? 'auto' : 'none';
+                }
+
                 const randomGroup = document.getElementById('randomSpeedGroup');
                 if (randomGroup) {
                     randomGroup.style.display = inputMode === 'random' ? 'block' : 'none';
@@ -428,8 +435,8 @@ function initGazeTarget() {
     });
 
     document.addEventListener('mousemove', (e) => {
-        if (inputMode !== 'mouse') return;
-        if (!isDragging) return;
+        if (inputMode === 'mouse' && !isDragging) return;
+        if (inputMode !== 'mouse' && inputMode !== 'hover') return;
         
         // Update target position
         targetX = e.clientX;

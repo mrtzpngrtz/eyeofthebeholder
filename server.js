@@ -1,6 +1,7 @@
 const express = require('express');
 const httpProxy = require('http-proxy');
 const path = require('path');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const { Server: OscServer } = require('node-osc');
 
@@ -8,6 +9,30 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const OSC_PORT = process.env.OSC_PORT || 3333;
 const COMFY_API = process.env.COMFY_API || 'http://127.0.0.1:8188';
+const TEMP_DIR = 'E:\\ComfyuiStandalone_2025\\ComfyUI\\temp';
+
+async function cleanTempFolder() {
+    try {
+        if (!fs.existsSync(TEMP_DIR)) return;
+        const files = await fs.promises.readdir(TEMP_DIR);
+        const now = Date.now();
+        // Delete files older than 30 seconds
+        await Promise.all(files.map(async file => {
+            try {
+                const filePath = path.join(TEMP_DIR, file);
+                const stats = await fs.promises.stat(filePath);
+                if (now - stats.mtimeMs > 30000) {
+                    await fs.promises.unlink(filePath);
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }));
+        // console.log('Cleaned temp folder'); 
+    } catch (err) {
+        console.error('Error cleaning temp folder:', err);
+    }
+}
 
 // OSC Server
 // Only start OSC server if not running in a cloud environment where UDP might be restricted,
@@ -58,12 +83,18 @@ proxy.on('error', (err, req, res) => {
 // Handle API routes
 // We use a middleware at root level to check paths so that req.url is not modified
 // (app.use('/path', ...) would strip '/path' from req.url)
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
     const shouldProxy = req.path.startsWith('/upload') || 
                        req.path.startsWith('/prompt') || 
                        req.path.startsWith('/view') || 
                        req.path.startsWith('/ws');
     
+    if (req.path.startsWith('/prompt') && req.method === 'POST') {
+        await cleanTempFolder();
+        proxy.web(req, res);
+        return;
+    }
+
     if (shouldProxy) {
         proxy.web(req, res);
     } else {

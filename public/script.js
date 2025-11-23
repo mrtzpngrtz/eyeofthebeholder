@@ -32,7 +32,7 @@ const EXPRESSION_PARAMS = [
     // Image
     { name: 'Src Ratio', category: 'Image', index: 12, min: 0, max: 1, step: 0.01, default: 1 },
     { name: 'Sample Ratio', category: 'Image', index: 13, min: 0, max: 1, step: 0.01, default: 1 },
-    { name: 'Crop Factor', category: 'Image', index: 14, min: 1.5, max: 3, step: 0.1, default: 2 }
+    { name: 'Crop Factor', category: 'Image', index: 14, min: 1.5, max: 3, step: 0.1, default: 1.5 }
 ];
 
 // Load the workflow template
@@ -290,6 +290,24 @@ function setupEventListeners() {
         wowBtn.addEventListener('click', animateWow);
     }
 
+    // Disgust button listener
+    const disgustBtn = document.getElementById('disgustBtn');
+    if (disgustBtn) {
+        disgustBtn.addEventListener('click', animateDisgust);
+    }
+
+    // Yes (Nod) button listener
+    const yesBtn = document.getElementById('yesBtn');
+    if (yesBtn) {
+        yesBtn.addEventListener('click', animateYes);
+    }
+
+    // No (Shake) button listener
+    const noBtn = document.getElementById('noBtn');
+    if (noBtn) {
+        noBtn.addEventListener('click', animateNo);
+    }
+
     // Initialize Gaze Target Dragging
     initGazeTarget();
 
@@ -307,6 +325,36 @@ function setupEventListeners() {
             sidebar.classList.toggle('open');
         });
     }
+
+    // Keyboard Controls
+    document.addEventListener('keydown', (e) => {
+        // Prevent triggering when typing in inputs
+        if (e.target.tagName === 'INPUT') return;
+
+        switch(e.key) {
+            case '1':
+                animateWink();
+                break;
+            case '2':
+                animateKiss();
+                break;
+            case '3':
+                animateSmiley();
+                break;
+            case '4':
+                animateWow();
+                break;
+            case '6':
+                animateDisgust();
+                break;
+            case '7':
+                animateYes();
+                break;
+            case '8':
+                animateNo();
+                break;
+        }
+    });
 }
 
 function resetExpression() {
@@ -452,15 +500,15 @@ function animateWink() {
 function animateKiss() {
     if (!window.uploadedFilename) return;
 
-    const eeeParam = EXPRESSION_PARAMS.find(p => p.name === 'EEE');
     const wooParam = EXPRESSION_PARAMS.find(p => p.name === 'WOO');
-    
-    if (!eeeParam || !wooParam) return;
+    const pitchParam = EXPRESSION_PARAMS.find(p => p.name === 'Rotate Pitch');
 
-    const eeeInput = document.getElementById(`param-${eeeParam.index}`);
-    const eeeVal = document.getElementById(`val-${eeeParam.index}`);
+    if (!wooParam || !pitchParam) return;
+
     const wooInput = document.getElementById(`param-${wooParam.index}`);
     const wooVal = document.getElementById(`val-${wooParam.index}`);
+    const pitchInput = document.getElementById(`param-${pitchParam.index}`);
+    const pitchVal = document.getElementById(`val-${pitchParam.index}`);
 
     const startTime = performance.now();
     const duration = 2000; // 2 seconds
@@ -469,39 +517,37 @@ function animateKiss() {
         const elapsed = currentTime - startTime;
         
         if (elapsed >= duration) {
-            // Reset to 0
-            eeeInput.value = 0;
-            eeeVal.textContent = "0";
             wooInput.value = 0;
             wooVal.textContent = "0";
+            pitchInput.value = 0;
+            pitchVal.textContent = "0";
             scheduleUpdate();
             return;
         }
         
-        let eeeValue, wooValue;
+        let wooValue, pitchValue;
         
         if (elapsed < duration / 2) {
-            // First half: Go to target
-            // EEE: 0 to -8
-            eeeValue = (elapsed / (duration / 2)) * -8;
-            // WOO: 0 to 7
-            wooValue = (elapsed / (duration / 2)) * 7;
+            // First half
+            // WOO: 0 to 15
+            wooValue = (elapsed / (duration / 2)) * 15;
+            // Pitch: 0 to -10 (Look up slightly)
+            pitchValue = (elapsed / (duration / 2)) * -10;
         } else {
-            // Second half: Return to 0
-            // EEE: -8 to 0
-            eeeValue = -8 - ((elapsed - duration / 2) / (duration / 2)) * -8;
-            // WOO: 7 to 0
-            wooValue = 7 - ((elapsed - duration / 2) / (duration / 2)) * 7;
+            // Second half
+            // WOO: 15 to 0
+            wooValue = 15 - ((elapsed - duration / 2) / (duration / 2)) * 15;
+            // Pitch: -10 to 0
+            pitchValue = -10 - ((elapsed - duration / 2) / (duration / 2)) * -10;
         }
-        
-        eeeInput.value = eeeValue;
-        eeeVal.textContent = eeeValue.toFixed(1);
         
         wooInput.value = wooValue;
         wooVal.textContent = wooValue.toFixed(1);
         
-        scheduleUpdate();
+        pitchInput.value = pitchValue;
+        pitchVal.textContent = pitchValue.toFixed(1);
         
+        scheduleUpdate();
         requestAnimationFrame(update);
     }
     
@@ -512,34 +558,60 @@ function animateSmiley() {
     if (!window.uploadedFilename) return;
 
     const smileParam = EXPRESSION_PARAMS.find(p => p.name === 'Smile');
-    if (!smileParam) return;
+    const eyebrowParam = EXPRESSION_PARAMS.find(p => p.name === 'Eyebrow');
+    const blinkParam = EXPRESSION_PARAMS.find(p => p.name === 'Blink');
 
-    const input = document.getElementById(`param-${smileParam.index}`);
-    const valDisplay = document.getElementById(`val-${smileParam.index}`);
+    if (!smileParam || !eyebrowParam || !blinkParam) return;
+
+    const smileInput = document.getElementById(`param-${smileParam.index}`);
+    const smileVal = document.getElementById(`val-${smileParam.index}`);
+    const eyebrowInput = document.getElementById(`param-${eyebrowParam.index}`);
+    const eyebrowVal = document.getElementById(`val-${eyebrowParam.index}`);
+    const blinkInput = document.getElementById(`param-${blinkParam.index}`);
+    const blinkVal = document.getElementById(`val-${blinkParam.index}`);
+
     const startTime = performance.now();
-    const duration = 1000; // 1 second (faster)
+    const duration = 2000; // 2 seconds (longer)
 
     function update(currentTime) {
         const elapsed = currentTime - startTime;
         
         if (elapsed >= duration) {
-            input.value = 0;
-            valDisplay.textContent = "0";
+            smileInput.value = 0;
+            smileVal.textContent = "0";
+            eyebrowInput.value = 0;
+            eyebrowVal.textContent = "0";
+            blinkInput.value = 0;
+            blinkVal.textContent = "0";
             scheduleUpdate();
             return;
         }
         
-        let value;
+        let smileValue, eyebrowValue, blinkValue;
+        
         if (elapsed < duration / 2) {
-            // 0 to 0.65
-            value = (elapsed / (duration / 2)) * 0.65;
+            // Smile: 0 to 1.0
+            smileValue = (elapsed / (duration / 2)) * 1.0;
+            // Eyebrow: 0 to 3
+            eyebrowValue = (elapsed / (duration / 2)) * 3;
+            // Blink: 0 to 2 (Squint)
+            blinkValue = (elapsed / (duration / 2)) * 2;
         } else {
-            // 0.65 to 0
-            value = 0.65 - ((elapsed - duration / 2) / (duration / 2)) * 0.65;
+            // Return
+            smileValue = 1.0 - ((elapsed - duration / 2) / (duration / 2)) * 1.0;
+            eyebrowValue = 3 - ((elapsed - duration / 2) / (duration / 2)) * 3;
+            blinkValue = 2 - ((elapsed - duration / 2) / (duration / 2)) * 2;
         }
         
-        input.value = value;
-        valDisplay.textContent = value.toFixed(2);
+        smileInput.value = smileValue;
+        smileVal.textContent = smileValue.toFixed(2);
+        
+        eyebrowInput.value = eyebrowValue;
+        eyebrowVal.textContent = eyebrowValue.toFixed(1);
+
+        blinkInput.value = blinkValue;
+        blinkVal.textContent = blinkValue.toFixed(1);
+        
         scheduleUpdate();
         
         requestAnimationFrame(update);
@@ -616,6 +688,138 @@ function animateWow() {
         requestAnimationFrame(update);
     }
     
+    requestAnimationFrame(update);
+}
+
+
+function animateDisgust() {
+    if (!window.uploadedFilename) return;
+
+    const eeeParam = EXPRESSION_PARAMS.find(p => p.name === 'EEE');
+    const eyebrowParam = EXPRESSION_PARAMS.find(p => p.name === 'Eyebrow');
+    const blinkParam = EXPRESSION_PARAMS.find(p => p.name === 'Blink');
+
+    if (!eeeParam || !eyebrowParam || !blinkParam) return;
+
+    const eeeInput = document.getElementById(`param-${eeeParam.index}`);
+    const eeeVal = document.getElementById(`val-${eeeParam.index}`);
+    const eyebrowInput = document.getElementById(`param-${eyebrowParam.index}`);
+    const eyebrowVal = document.getElementById(`val-${eyebrowParam.index}`);
+    const blinkInput = document.getElementById(`param-${blinkParam.index}`);
+    const blinkVal = document.getElementById(`val-${blinkParam.index}`);
+
+    const startTime = performance.now();
+    const duration = 2000; // 2 seconds
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        
+        if (elapsed >= duration) {
+            eeeInput.value = 0;
+            eeeVal.textContent = "0";
+            eyebrowInput.value = 0;
+            eyebrowVal.textContent = "0";
+            blinkInput.value = 0;
+            blinkVal.textContent = "0";
+            scheduleUpdate();
+            return;
+        }
+        
+        let eeeValue, eyebrowValue, blinkValue;
+        
+        if (elapsed < duration / 2) {
+            // EEE: 0 to 15
+            eeeValue = (elapsed / (duration / 2)) * 15;
+            // Eyebrow: 0 to -10 (Frown)
+            eyebrowValue = (elapsed / (duration / 2)) * -10;
+            // Blink: 0 to 4 (Squint)
+            blinkValue = (elapsed / (duration / 2)) * 4;
+        } else {
+            // Return
+            eeeValue = 15 - ((elapsed - duration / 2) / (duration / 2)) * 15;
+            eyebrowValue = -10 - ((elapsed - duration / 2) / (duration / 2)) * -10;
+            blinkValue = 4 - ((elapsed - duration / 2) / (duration / 2)) * 4;
+        }
+        
+        eeeInput.value = eeeValue;
+        eeeVal.textContent = eeeValue.toFixed(1);
+        
+        eyebrowInput.value = eyebrowValue;
+        eyebrowVal.textContent = eyebrowValue.toFixed(1);
+
+        blinkInput.value = blinkValue;
+        blinkVal.textContent = blinkValue.toFixed(1);
+        
+        scheduleUpdate();
+        requestAnimationFrame(update);
+    }
+    
+    requestAnimationFrame(update);
+}
+
+function animateYes() {
+    if (!window.uploadedFilename) return;
+
+    const pitchParam = EXPRESSION_PARAMS.find(p => p.name === 'Rotate Pitch');
+    if (!pitchParam) return;
+
+    const pitchInput = document.getElementById(`param-${pitchParam.index}`);
+    const pitchVal = document.getElementById(`val-${pitchParam.index}`);
+
+    const startTime = performance.now();
+    const duration = 1000; 
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        
+        if (elapsed >= duration) {
+            pitchInput.value = 0;
+            pitchVal.textContent = "0";
+            scheduleUpdate();
+            return;
+        }
+        
+        const value = Math.sin((elapsed / duration) * Math.PI * 4) * 15;
+        
+        pitchInput.value = value;
+        pitchVal.textContent = value.toFixed(1);
+        
+        scheduleUpdate();
+        requestAnimationFrame(update);
+    }
+    requestAnimationFrame(update);
+}
+
+function animateNo() {
+    if (!window.uploadedFilename) return;
+
+    const yawParam = EXPRESSION_PARAMS.find(p => p.name === 'Rotate Yaw');
+    if (!yawParam) return;
+
+    const yawInput = document.getElementById(`param-${yawParam.index}`);
+    const yawVal = document.getElementById(`val-${yawParam.index}`);
+
+    const startTime = performance.now();
+    const duration = 1000; 
+
+    function update(currentTime) {
+        const elapsed = currentTime - startTime;
+        
+        if (elapsed >= duration) {
+            yawInput.value = 0;
+            yawVal.textContent = "0";
+            scheduleUpdate();
+            return;
+        }
+        
+        const value = Math.sin((elapsed / duration) * Math.PI * 4) * 20;
+        
+        yawInput.value = value;
+        yawVal.textContent = value.toFixed(1);
+        
+        scheduleUpdate();
+        requestAnimationFrame(update);
+    }
     requestAnimationFrame(update);
 }
 

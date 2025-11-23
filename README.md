@@ -2,7 +2,7 @@
 
 A real-time facial expression editing interface powered by ComfyUI.
 
-![Eye of the Beholder Preview](preview.webm)
+![Eye of the Beholder Preview](preview.gif)
 
 ## Description
 This web application allows you to upload an image and manipulate facial features (like wink, smile, head rotation) using an intuitive UI. It communicates with a local ComfyUI instance to generate results.

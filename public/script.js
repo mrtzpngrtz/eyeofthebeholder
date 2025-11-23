@@ -6,6 +6,8 @@ let isProcessing = false;
 let needsUpdate = false;
 let pollingInterval = 100; // Default to 100ms to be safe
 let lastPromptTime = 0;
+let inputMode = 'mouse'; // 'mouse' or 'osc'
+
 // Store current normalized coordinates (0-1)
 let oscX = 0.5;
 let oscY = 0.5;
@@ -211,6 +213,8 @@ function updateFromOsc() {
         debugVal.textContent = `X: ${oscX.toFixed(3)} | Y: ${oscY.toFixed(3)}`;
     }
 
+    if (inputMode !== 'osc') return;
+
     // Map normalized (0-1) to screen coordinates
     const screenX = oscX * window.innerWidth;
     const screenY = oscY * window.innerHeight;
@@ -247,6 +251,17 @@ function setupEventListeners() {
             }
         });
     }
+
+    // Input Source Switching
+    const inputRadios = document.getElementsByName('inputSource');
+    inputRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                inputMode = e.target.value;
+                console.log('Input mode switched to:', inputMode);
+            }
+        });
+    });
 
     imageInput.addEventListener('change', handleImageUpload);
     generateBtn.addEventListener('click', () => queuePrompt(false));
@@ -329,6 +344,7 @@ function initGazeTarget() {
     });
 
     document.addEventListener('mousemove', (e) => {
+        if (inputMode !== 'mouse') return;
         if (!isDragging) return;
         
         // Update target position
@@ -610,7 +626,15 @@ async function handleImageUpload(e) {
     // Show preview
     const reader = new FileReader();
     reader.onload = (e) => {
-        document.getElementById('sourcePreview').src = e.target.result;
+        const img = document.getElementById('sourcePreview');
+        const placeholder = document.querySelector('.placeholder-text');
+        if (img) {
+            img.src = e.target.result;
+            img.style.display = 'block';
+        }
+        if (placeholder) {
+            placeholder.style.display = 'none';
+        }
     };
     reader.readAsDataURL(file);
 

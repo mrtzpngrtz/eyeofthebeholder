@@ -5,11 +5,13 @@ const { Server } = require('socket.io');
 const { Server: OscServer } = require('node-osc');
 
 const app = express();
-const PORT = 3000;
-const OSC_PORT = 3333;
-const COMFY_API = 'http://127.0.0.1:8188';
+const PORT = process.env.PORT || 3000;
+const OSC_PORT = process.env.OSC_PORT || 3333;
+const COMFY_API = process.env.COMFY_API || 'http://127.0.0.1:8188';
 
 // OSC Server
+// Only start OSC server if not running in a cloud environment where UDP might be restricted,
+// or if specifically configured. For now, we keep it as is but make port configurable.
 const oscServer = new OscServer(OSC_PORT, '0.0.0.0', () => {
     console.log(`OSC Server listening on port ${OSC_PORT}`);
 });

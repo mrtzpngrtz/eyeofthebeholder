@@ -23,19 +23,46 @@
                 <img id="resultImage" src="" alt="">
                 <div id="loading" class="hidden">Updating...</div>
             </div>
-            <img id="sourcePreview" src="" alt="" style="display:none;">
         </div>
 
         <!-- Controls Sidebar -->
         <div class="controls-section" id="controlsSidebar">
-            <div class="input-group">
-                <label for="imageInput">Upload Source</label>
-                <input type="file" id="imageInput" accept="image/*">
+            <div class="sidebar-header">
+                <h1>CONTROLS</h1>
             </div>
 
-            <div class="input-group" style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
-                <input type="checkbox" id="trackingToggle" checked style="width: auto; margin: 0;">
-                <label for="trackingToggle" style="display: block; color: #aaa; font-size: 0.7em; cursor: pointer;">SHOW TRACKING CURSOR</label>
+            <!-- Source Image Section -->
+            <div class="section-box">
+                <div class="category-header">SOURCE IMAGE</div>
+                <div class="upload-container">
+                    <div class="source-preview-container">
+                        <img id="sourcePreview" src="" alt="No Image">
+                        <div class="placeholder-text">No Image</div>
+                    </div>
+                    <label for="imageInput" class="upload-btn">
+                        UPLOAD IMAGE
+                    </label>
+                    <input type="file" id="imageInput" accept="image/*" class="hidden-file-input">
+                </div>
+            </div>
+
+            <!-- Input Source & Tracking -->
+            <div class="section-box">
+                <div class="category-header">INPUT & TRACKING</div>
+                
+                <!-- Segmented Control for Input -->
+                <div class="segmented-control">
+                    <input type="radio" name="inputSource" value="mouse" id="modeMouse" checked>
+                    <label for="modeMouse">MOUSE</label>
+                    
+                    <input type="radio" name="inputSource" value="osc" id="modeOsc">
+                    <label for="modeOsc">OSC</label>
+                </div>
+
+                <div class="toggle-row">
+                    <label for="trackingToggle">SHOW CURSOR</label>
+                    <input type="checkbox" id="trackingToggle" checked>
+                </div>
             </div>
 
             <div class="input-group" style="margin-top: 10px;">
@@ -66,16 +93,16 @@
             <div id="status" class="status">Ready</div>
             
             <!-- OSC Debug Info -->
-            <div class="osc-status" style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #333; font-size: 0.7em; color: #888;">
-                <div style="display:flex; justify-content:space-between;">
+            <div class="osc-status">
+                <div class="osc-row">
                     <span>OSC Status:</span>
                     <span id="oscConnection" style="color: #666;">Disconnected</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-top: 5px;">
+                <div class="osc-row">
                     <span>Last Input:</span>
                     <span id="oscValues">X: - | Y: -</span>
                 </div>
-                <div id="oscActivity" style="width: 10px; height: 10px; background: #333; border-radius: 50%; margin-top: 5px; align-self: flex-end;"></div>
+                <div id="oscActivity"></div>
             </div>
         </div>
     </div>

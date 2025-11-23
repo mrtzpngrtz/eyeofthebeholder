@@ -57,12 +57,23 @@
                     
                     <input type="radio" name="inputSource" value="osc" id="modeOsc">
                     <label for="modeOsc">OSC</label>
+
+                    <input type="radio" name="inputSource" value="random" id="modeRandom">
+                    <label for="modeRandom">RANDOM</label>
                 </div>
 
                 <div class="toggle-row">
                     <label for="trackingToggle">SHOW CURSOR</label>
                     <input type="checkbox" id="trackingToggle" checked>
                 </div>
+            </div>
+
+            <!-- Random Speed Slider (Only visible in Random Mode) -->
+            <div class="input-group" id="randomSpeedGroup" style="margin-top: 10px; display: none;">
+                <label style="display: flex; justify-content: space-between; color: #aaa; font-size: 0.7em;">
+                    RANDOM SPEED <span id="randomSpeedVal">1.0</span>
+                </label>
+                <input type="range" id="randomSpeed" min="0.1" max="20.0" step="0.1" value="1.0" style="width:100%">
             </div>
 
             <div class="input-group" style="margin-top: 10px;">

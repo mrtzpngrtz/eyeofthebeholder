@@ -34,6 +34,9 @@ async function cleanTempFolder() {
     }
 }
 
+// Run cleanup every 10 seconds
+setInterval(cleanTempFolder, 10000);
+
 // OSC Server
 // Only start OSC server if not running in a cloud environment where UDP might be restricted,
 // or if specifically configured. For now, we keep it as is but make port configurable.
@@ -90,7 +93,6 @@ app.use(async (req, res, next) => {
                        req.path.startsWith('/ws');
     
     if (req.path.startsWith('/prompt') && req.method === 'POST') {
-        await cleanTempFolder();
         proxy.web(req, res);
         return;
     }

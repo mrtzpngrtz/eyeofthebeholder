@@ -1,10 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
+:root {
+    --bg-primary: #000;
+    --bg-secondary: #111;
+    --bg-tertiary: #222;
+    --bg-panel: rgba(0, 0, 0, 0.95);
+    
+    --text-primary: #fff;
+    --text-secondary: #aaa;
+    --text-tertiary: #666;
+    
+    --border-primary: #333;
+    --border-secondary: #444;
+    
+    --accent-success: #4caf50;
+    --accent-error: #ff6b6b;
+    --accent-active: #00ff00;
+    
+    --font-main: 'Inter', Helvetica, Arial, sans-serif;
+    --font-mono: 'Roboto Mono', monospace;
+}
+
 body {
-    font-family: 'Inter', Helvetica, Arial, sans-serif;
-    background-color: #000;
-    color: #fff;
+    font-family: var(--font-main);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     margin: 0;
     padding: 0;
     width: 100vw;
@@ -17,7 +38,7 @@ body {
 #customCursor {
     width: 30px;
     height: 30px;
-    background: #fff;
+    background: var(--text-primary);
     border-radius: 50%;
     position: fixed;
     pointer-events: auto;
@@ -46,7 +67,7 @@ body:hover #customCursor { opacity: 1; }
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #000;
+    background: var(--bg-primary);
     min-width: 0;
 }
 
@@ -69,7 +90,7 @@ body:hover #customCursor { opacity: 1; }
     position: relative;
     height: 100%;
     width: 0;
-    background: rgba(0, 0, 0, 0.95);
+    background: var(--bg-panel);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     padding: 60px 0 20px 0;
@@ -87,7 +108,7 @@ body:hover #customCursor { opacity: 1; }
 .controls-section.open {
     width: 300px;
     padding: 60px 20px 20px 20px;
-    border-right: 1px solid #333;
+    border-right: 1px solid var(--border-primary);
 }
 
 /* Sidebar Components */
@@ -95,13 +116,13 @@ body:hover #customCursor { opacity: 1; }
     font-size: 1.2em;
     margin: 0 0 10px 0;
     letter-spacing: 2px;
-    color: #fff;
+    color: var(--text-primary);
     font-weight: 700;
 }
 
 .section-box {
-    background: #111;
-    border: 1px solid #333;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
     padding: 12px;
     border-radius: 4px;
     display: flex;
@@ -111,10 +132,11 @@ body:hover #customCursor { opacity: 1; }
 }
 
 .category-header {
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-main);
     font-weight: 700;
     font-size: 0.7em;
-    color: #888;
+    color: 888; /* This was implicit, now explicitly keeping it or changing to var if we had one */
+    color: #888; 
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -129,8 +151,8 @@ body:hover #customCursor { opacity: 1; }
 .source-preview-container {
     width: 60px;
     height: 60px;
-    background: #222;
-    border: 1px solid #444;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-secondary);
     position: relative;
     overflow: hidden;
     border-radius: 4px;
@@ -162,8 +184,8 @@ body:hover #customCursor { opacity: 1; }
 
 .upload-btn {
     flex: 1;
-    background: #333;
-    color: #fff;
+    background: var(--border-primary);
+    color: var(--text-primary);
     border: 1px solid #555;
     padding: 0;
     height: 60px;
@@ -173,20 +195,20 @@ body:hover #customCursor { opacity: 1; }
     cursor: pointer;
     font-size: 0.75em;
     font-weight: 600;
-    font-family: 'Roboto Mono', monospace;
+    font-family: var(--font-mono);
     transition: all 0.2s;
     text-align: center;
 }
 .upload-btn:hover {
-    background: #444;
-    border-color: #fff;
+    background: var(--border-secondary);
+    border-color: var(--text-primary);
 }
 
 /* Segmented Control */
 .segmented-control {
     display: flex;
     width: 100%;
-    background: #222;
+    background: var(--bg-tertiary);
     border-radius: 4px;
     padding: 2px;
     gap: 2px;
@@ -206,12 +228,12 @@ body:hover #customCursor { opacity: 1; }
     border-radius: 3px;
     color: #888;
     transition: all 0.2s;
-    font-family: 'Roboto Mono', monospace;
+    font-family: var(--font-mono);
 }
 
 .segmented-control input[type="radio"]:checked + label {
-    background: #fff;
-    color: #000;
+    background: var(--text-primary);
+    color: var(--bg-primary);
 }
 
 /* Toggle Row */
@@ -220,18 +242,18 @@ body:hover #customCursor { opacity: 1; }
     justify-content: space-between;
     align-items: center;
     font-size: 0.7em;
-    color: #aaa;
+    color: var(--text-secondary);
     font-weight: 600;
     margin-top: 5px;
     padding-top: 10px;
-    border-top: 1px solid #222;
+    border-top: 1px solid var(--bg-tertiary);
 }
 
 .toggle-row input[type="checkbox"] {
     appearance: none;
     width: 40px;
     height: 20px;
-    background: #333;
+    background: var(--border-primary);
     border-radius: 10px;
     position: relative;
     cursor: pointer;
@@ -249,11 +271,11 @@ body:hover #customCursor { opacity: 1; }
     transition: transform 0.2s;
 }
 .toggle-row input[type="checkbox"]:checked {
-    background: #fff;
+    background: var(--text-primary);
 }
 .toggle-row input[type="checkbox"]:checked::after {
     transform: translateX(20px);
-    background: #000;
+    background: var(--bg-primary);
 }
 
 /* Sliders & Rest */
@@ -270,11 +292,11 @@ body:hover #customCursor { opacity: 1; }
     gap: 10px;
     margin-bottom: 10px;
     scrollbar-width: thin;
-    scrollbar-color: #444 #000;
+    scrollbar-color: var(--border-secondary) var(--bg-primary);
 }
 .sliders-container::-webkit-scrollbar { width: 3px; }
-.sliders-container::-webkit-scrollbar-track { background: #000; }
-.sliders-container::-webkit-scrollbar-thumb { background: #444; }
+.sliders-container::-webkit-scrollbar-track { background: var(--bg-primary); }
+.sliders-container::-webkit-scrollbar-thumb { background: var(--border-secondary); }
 
 /* Category Headers in Slider Area */
 .category-column {
@@ -283,11 +305,11 @@ body:hover #customCursor { opacity: 1; }
     gap: 8px;
 }
 .category-column .category-header {
-    border-bottom: 1px solid #333;
+    border-bottom: 1px solid var(--border-primary);
     padding-bottom: 2px;
     margin-bottom: 4px;
     margin-top: 5px;
-    color: #fff;
+    color: var(--text-primary);
 }
 
 .slider-group {
@@ -299,19 +321,19 @@ body:hover #customCursor { opacity: 1; }
     display: flex;
     justify-content: space-between;
     font-size: 0.65em;
-    color: #aaa;
+    color: var(--text-secondary);
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.5px;
 }
 .slider-group span {
-    font-family: 'Roboto Mono', monospace;
-    color: #fff;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
 }
 .slider-group input[type="range"] {
     width: 100%;
     height: 2px;
-    background: #333;
+    background: var(--border-primary);
     border-radius: 0;
     appearance: none;
     outline: none;
@@ -321,14 +343,14 @@ body:hover #customCursor { opacity: 1; }
     appearance: none;
     width: 10px;
     height: 10px;
-    background: #888;
+    background: #888; /* Keeping thumb distinct */
     border-radius: 50%;
     cursor: pointer;
     transition: transform 0.1s, background 0.2s;
 }
 .slider-group input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.2);
-    background: #fff;
+    background: var(--text-primary);
 }
 
 /* Expression Buttons */
@@ -340,11 +362,11 @@ body:hover #customCursor { opacity: 1; }
     flex: 0 0 auto;
 }
 .expression-btn {
-    background: #111;
-    color: #fff;
-    border: 1px solid #333;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border-primary);
     cursor: pointer;
-    font-family: 'Roboto Mono', monospace;
+    font-family: var(--font-mono);
     font-weight: 600;
     font-size: 0.7em;
     transition: all 0.2s;
@@ -354,8 +376,8 @@ body:hover #customCursor { opacity: 1; }
     justify-content: center;
 }
 .expression-btn:hover {
-    background: #fff;
-    color: #000;
+    background: var(--text-primary);
+    color: var(--bg-primary);
 }
 .expression-btn:active { transform: scale(0.98); }
 
@@ -369,11 +391,11 @@ body:hover #customCursor { opacity: 1; }
 }
 button#generateBtn, button#resetBtn {
     padding: 10px;
-    background: #fff;
-    color: #000;
+    background: var(--text-primary);
+    color: var(--bg-primary);
     border: none;
     cursor: pointer;
-    font-family: 'Roboto Mono', monospace;
+    font-family: var(--font-mono);
     font-weight: 700;
     font-size: 0.8em;
     text-transform: uppercase;
@@ -382,8 +404,8 @@ button#generateBtn, button#resetBtn {
 }
 button#resetBtn {
     background: transparent;
-    border: 1px solid #fff;
-    color: #fff;
+    border: 1px solid var(--text-primary);
+    color: var(--text-primary);
 }
 button:hover { opacity: 0.8; }
 
@@ -391,12 +413,12 @@ button:hover { opacity: 0.8; }
 .osc-status {
     margin-top: 10px;
     padding: 10px;
-    background: #111;
-    border: 1px solid #333;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-primary);
     border-radius: 4px;
     font-size: 0.65em;
-    color: #666;
-    font-family: 'Roboto Mono', monospace;
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
 }
 .osc-row {
     display: flex;
@@ -406,7 +428,7 @@ button:hover { opacity: 0.8; }
 #oscActivity {
     width: 6px;
     height: 6px;
-    background: #333;
+    background: var(--border-primary);
     border-radius: 50%;
     margin-left: auto;
 }
@@ -429,7 +451,7 @@ button:hover { opacity: 0.8; }
     display: block;
     width: 25px;
     height: 2px;
-    background-color: #fff;
+    background-color: var(--text-primary);
     transition: all 0.3s ease;
     box-shadow: 0 0 5px rgba(0,0,0,0.5);
 }
@@ -439,9 +461,9 @@ button:hover { opacity: 0.8; }
     position: absolute;
     top: 20px;
     right: 20px;
-    color: #fff;
+    color: var(--text-primary);
     font-size: 0.7em;
-    font-family: 'Roboto Mono', monospace;
+    font-family: var(--font-mono);
     text-transform: uppercase;
     letter-spacing: 2px;
     pointer-events: none;

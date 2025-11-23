@@ -1,4 +1,10 @@
 const COMFY_API = ''; // Relative path to use proxy
+const NODES = {
+    EXPRESSION_EDITOR: "14",
+    LOAD_IMAGE: "15",
+    PREVIEW_IMAGE: "32"
+};
+
 let clientId = crypto.randomUUID();
 let ws;
 let socket; // Socket.io
@@ -6,11 +12,22 @@ let isProcessing = false;
 let needsUpdate = false;
 let pollingInterval = 100; // Default to 100ms to be safe
 let lastPromptTime = 0;
-let inputMode = 'mouse'; // 'mouse' or 'osc'
+let inputMode = 'mouse'; // 'mouse', 'osc', or 'random'
 
 // Store current normalized coordinates (0-1)
 let oscX = 0.5;
 let oscY = 0.5;
+
+// Random Mode State
+let randomModeInterval;
+let randomExpressionInterval;
+let randomX = window.innerWidth / 2;
+let randomY = window.innerHeight / 2;
+let targetRandomX = window.innerWidth / 2;
+let targetRandomY = window.innerHeight / 2;
+let randomSpeed = 1.0;
+let randomTimeAccumulator = 0;
+let lastRandomFrameTime = 0;
 
 // Expression Editor Parameters Mapping
 // Updated based on actual node definition
@@ -125,7 +142,7 @@ function setupWebSocket() {
                 setTimeout(processQueue, 50); 
             }
         } else if (message.type === 'executed') {
-            if (message.data.node === '32') { // PreviewImage node ID
+            if (message.data.node === NODES.PREVIEW_IMAGE) {
                 const images = message.data.output.images;
                 if (images && images.length > 0) {
                     const img = images[0];
@@ -239,6 +256,14 @@ function setupEventListeners() {
         });
     }
 
+    const randomSpeedInput = document.getElementById('randomSpeed');
+    if (randomSpeedInput) {
+        randomSpeedInput.addEventListener('input', (e) => {
+            randomSpeed = parseFloat(e.target.value);
+            document.getElementById('randomSpeedVal').textContent = randomSpeed.toFixed(1);
+        });
+    }
+
     const imageInput = document.getElementById('imageInput');
     const generateBtn = document.getElementById('generateBtn');
     const trackingToggle = document.getElementById('trackingToggle');
@@ -259,6 +284,17 @@ function setupEventListeners() {
             if (e.target.checked) {
                 inputMode = e.target.value;
                 console.log('Input mode switched to:', inputMode);
+                
+                const randomGroup = document.getElementById('randomSpeedGroup');
+                if (randomGroup) {
+                    randomGroup.style.display = inputMode === 'random' ? 'block' : 'none';
+                }
+
+                if (inputMode === 'random') {
+                    startRandomMode();
+                } else {
+                    stopRandomMode();
+                }
             }
         });
     });
@@ -405,6 +441,198 @@ function initGazeTarget() {
     });
 }
 
+// Random offsets for noise generation to ensure X and Y are different
+const xOffset1 = Math.random() * 1000;
+const xOffset2 = Math.random() * 1000;
+const yOffset1 = Math.random() * 1000;
+const yOffset2 = Math.random() * 1000;
+
+function startRandomMode() {
+    // Stop any existing intervals first
+    stopRandomMode();
+    
+    // Reset time tracking
+    lastRandomFrameTime = performance.now();
+    
+    updateRandomMovement();
+    scheduleNextExpression();
+}
+
+// Random Movement Loop
+function updateRandomMovement() {
+    if (inputMode !== 'random') return;
+
+    const now = performance.now();
+    const dt = now - lastRandomFrameTime;
+    lastRandomFrameTime = now;
+
+    // Vary the speed over time (slow/fast cycles)
+    // Use a separate time base for the speed modulation
+    // Speed up the variance cycle (from 0.0002 to 0.001) so changes are more noticeable (approx 6s cycle)
+    const speedTime = now * 0.001;
+    
+    // Modulate speed between 0.2x and 1.8x of base speed for more dramatic effect
+    const variance = 1.0 + Math.sin(speedTime) * 0.8;
+    
+    // Ensure we use the latest randomSpeed global variable
+    const currentSpeed = randomSpeed * variance;
+    
+    // Accumulate time based on current speed
+    // Increased base factor from 0.002 to 0.005 for even faster potential movement
+    randomTimeAccumulator += dt * 0.005 * currentSpeed;
+    
+    const time = randomTimeAccumulator;
+    
+    // Debug log every ~1 second
+    if (Math.random() < 0.01) {
+        console.log('Random Speed:', randomSpeed, 'Variance:', variance.toFixed(2), 'Current:', currentSpeed.toFixed(3));
+    }
+
+    // Generate smooth noise using overlapping sine waves with prime number frequencies
+    // This creates a non-repeating, organic wandering path
+    
+    // Normalized X (-1 to 1)
+    const nX = Math.sin(time + xOffset1) * 0.5 + 
+               Math.sin(time * 0.5 + xOffset2) * 0.3 + 
+               Math.sin(time * 0.23) * 0.2;
+
+    // Normalized Y (-1 to 1)
+    const nY = Math.sin(time * 0.8 + yOffset1) * 0.5 + 
+               Math.sin(time * 0.4 + yOffset2) * 0.3 + 
+               Math.sin(time * 0.17) * 0.2;
+
+    // Map to screen coordinates with some padding so it doesn't stick to edges
+    // (0-1 range) -> Screen Range
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    
+    // Convert -1..1 to 0..1 then map to screen
+    randomX = ((nX + 1) / 2) * w;
+    randomY = ((nY + 1) / 2) * h;
+
+    updateTargetPosition(randomX, randomY);
+    updateGazeParams(randomX, randomY);
+    
+    randomModeInterval = requestAnimationFrame(updateRandomMovement);
+}
+
+// Random Expressions Loop (Every 5-15 seconds)
+function scheduleNextExpression() {
+    const delay = 5000 + Math.random() * 10000;
+    randomExpressionInterval = setTimeout(() => {
+        if (inputMode !== 'random') return;
+        
+        triggerRandomExpression();
+        scheduleNextExpression();
+    }, delay);
+}
+
+function stopRandomMode() {
+    if (randomModeInterval) cancelAnimationFrame(randomModeInterval);
+    if (randomExpressionInterval) clearTimeout(randomExpressionInterval);
+}
+
+function triggerRandomExpression() {
+    const expressions = [
+        animateWink, 
+        animateKiss, 
+        animateSmiley, 
+        animateWow, 
+        animateDisgust, 
+        animateYes, 
+        animateNo
+    ];
+    
+    const randomIdx = Math.floor(Math.random() * expressions.length);
+    const expressionFn = expressions[randomIdx];
+    
+    console.log('Triggering random expression:', expressionFn.name);
+    expressionFn();
+}
+
+function startRandomMode() {
+    // Stop any existing intervals first
+    stopRandomMode();
+    
+    // Random offsets for noise generation to ensure X and Y are different
+    const xOffset1 = Math.random() * 1000;
+    const xOffset2 = Math.random() * 1000;
+    const yOffset1 = Math.random() * 1000;
+    const yOffset2 = Math.random() * 1000;
+
+    // Random Movement Loop
+    function updateRandomMovement() {
+        if (inputMode !== 'random') return;
+
+        const time = performance.now() * 0.0005; // Base speed scaling
+
+        // Generate smooth noise using overlapping sine waves with prime number frequencies
+        // This creates a non-repeating, organic wandering path
+        
+        // Normalized X (-1 to 1)
+        const nX = Math.sin(time + xOffset1) * 0.5 + 
+                   Math.sin(time * 0.5 + xOffset2) * 0.3 + 
+                   Math.sin(time * 0.23) * 0.2;
+
+        // Normalized Y (-1 to 1)
+        const nY = Math.sin(time * 0.8 + yOffset1) * 0.5 + 
+                   Math.sin(time * 0.4 + yOffset2) * 0.3 + 
+                   Math.sin(time * 0.17) * 0.2;
+
+        // Map to screen coordinates with some padding so it doesn't stick to edges
+        // (0-1 range) -> Screen Range
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        
+        // Convert -1..1 to 0..1 then map to screen
+        randomX = ((nX + 1) / 2) * w;
+        randomY = ((nY + 1) / 2) * h;
+
+        updateTargetPosition(randomX, randomY);
+        updateGazeParams(randomX, randomY);
+        
+        randomModeInterval = requestAnimationFrame(updateRandomMovement);
+    }
+    
+    updateRandomMovement();
+
+    // Random Expressions Loop (Every 5-15 seconds)
+    function scheduleNextExpression() {
+        const delay = 5000 + Math.random() * 10000;
+        randomExpressionInterval = setTimeout(() => {
+            if (inputMode !== 'random') return;
+            
+            triggerRandomExpression();
+            scheduleNextExpression();
+        }, delay);
+    }
+    
+    scheduleNextExpression();
+}
+
+function stopRandomMode() {
+    if (randomModeInterval) cancelAnimationFrame(randomModeInterval);
+    if (randomExpressionInterval) clearTimeout(randomExpressionInterval);
+}
+
+function triggerRandomExpression() {
+    const expressions = [
+        animateWink, 
+        animateKiss, 
+        animateSmiley, 
+        animateWow, 
+        animateDisgust, 
+        animateYes, 
+        animateNo
+    ];
+    
+    const randomIdx = Math.floor(Math.random() * expressions.length);
+    const expressionFn = expressions[randomIdx];
+    
+    console.log('Triggering random expression:', expressionFn.name);
+    expressionFn();
+}
+
 function updateTargetPosition(x, y) {
     const target = document.getElementById('customCursor');
     if (target) {
@@ -457,370 +685,169 @@ function updateGazeParams(x, y) {
     scheduleUpdate();
 }
 
-function animateWink() {
+// Helper to animate parameters
+function runAnimation(duration, updateFn, onComplete) {
     if (!window.uploadedFilename) return;
-
-    const winkParam = EXPRESSION_PARAMS.find(p => p.name === 'Wink');
-    if (!winkParam) return;
-
-    const input = document.getElementById(`param-${winkParam.index}`);
-    const valDisplay = document.getElementById(`val-${winkParam.index}`);
+    
     const startTime = performance.now();
-    const duration = 2000; // 2 seconds
 
-    function update(currentTime) {
+    function loop(currentTime) {
         const elapsed = currentTime - startTime;
-        
         if (elapsed >= duration) {
-            input.value = 0;
-            valDisplay.textContent = "0";
+            if (onComplete) onComplete();
             scheduleUpdate();
             return;
         }
         
-        let value;
-        if (elapsed < duration / 2) {
-            // 0 to 20
-            value = (elapsed / (duration / 2)) * 20;
-        } else {
-            // 20 to 0
-            value = 20 - ((elapsed - duration / 2) / (duration / 2)) * 20;
-        }
-        
-        input.value = value;
-        valDisplay.textContent = value.toFixed(1);
+        updateFn(elapsed, duration);
         scheduleUpdate();
-        
-        requestAnimationFrame(update);
+        requestAnimationFrame(loop);
     }
     
-    requestAnimationFrame(update);
+    requestAnimationFrame(loop);
+}
+
+// Helper to set param value
+function setParamValue(paramName, value) {
+    const param = EXPRESSION_PARAMS.find(p => p.name === paramName);
+    if (!param) return;
+    
+    const input = document.getElementById(`param-${param.index}`);
+    const valDisplay = document.getElementById(`val-${param.index}`);
+    
+    if (input && valDisplay) {
+        input.value = value;
+        valDisplay.textContent = value.toFixed(2);
+    }
+}
+
+// Helper for simple linear back-and-forth animations
+function animateLinear(paramName, targetValue, duration = 2000) {
+    runAnimation(duration, (elapsed, d) => {
+        let val;
+        if (elapsed < d / 2) {
+            val = (elapsed / (d / 2)) * targetValue;
+        } else {
+            val = targetValue - ((elapsed - d / 2) / (d / 2)) * targetValue;
+        }
+        setParamValue(paramName, val);
+    }, () => {
+        setParamValue(paramName, 0);
+    });
+}
+
+function animateWink() {
+    animateLinear('Wink', 20);
 }
 
 function animateKiss() {
-    if (!window.uploadedFilename) return;
-
-    const wooParam = EXPRESSION_PARAMS.find(p => p.name === 'WOO');
-    const pitchParam = EXPRESSION_PARAMS.find(p => p.name === 'Rotate Pitch');
-
-    if (!wooParam || !pitchParam) return;
-
-    const wooInput = document.getElementById(`param-${wooParam.index}`);
-    const wooVal = document.getElementById(`val-${wooParam.index}`);
-    const pitchInput = document.getElementById(`param-${pitchParam.index}`);
-    const pitchVal = document.getElementById(`val-${pitchParam.index}`);
-
-    const startTime = performance.now();
-    const duration = 2000; // 2 seconds
-
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        
-        if (elapsed >= duration) {
-            wooInput.value = 0;
-            wooVal.textContent = "0";
-            pitchInput.value = 0;
-            pitchVal.textContent = "0";
-            scheduleUpdate();
-            return;
-        }
-        
-        let wooValue, pitchValue;
-        
+    runAnimation(2000, (elapsed, duration) => {
+        let woo, pitch;
         if (elapsed < duration / 2) {
-            // First half
-            // WOO: 0 to 15
-            wooValue = (elapsed / (duration / 2)) * 15;
-            // Pitch: 0 to -10 (Look up slightly)
-            pitchValue = (elapsed / (duration / 2)) * -10;
+            const t = elapsed / (duration / 2);
+            woo = t * 15;
+            pitch = t * -10;
         } else {
-            // Second half
-            // WOO: 15 to 0
-            wooValue = 15 - ((elapsed - duration / 2) / (duration / 2)) * 15;
-            // Pitch: -10 to 0
-            pitchValue = -10 - ((elapsed - duration / 2) / (duration / 2)) * -10;
+            const t = (elapsed - duration / 2) / (duration / 2);
+            woo = 15 - t * 15;
+            pitch = -10 - t * -10;
         }
-        
-        wooInput.value = wooValue;
-        wooVal.textContent = wooValue.toFixed(1);
-        
-        pitchInput.value = pitchValue;
-        pitchVal.textContent = pitchValue.toFixed(1);
-        
-        scheduleUpdate();
-        requestAnimationFrame(update);
-    }
-    
-    requestAnimationFrame(update);
+        setParamValue('WOO', woo);
+        setParamValue('Rotate Pitch', pitch);
+    }, () => {
+        setParamValue('WOO', 0);
+        setParamValue('Rotate Pitch', 0);
+    });
 }
 
 function animateSmiley() {
-    if (!window.uploadedFilename) return;
-
-    const smileParam = EXPRESSION_PARAMS.find(p => p.name === 'Smile');
-    const eyebrowParam = EXPRESSION_PARAMS.find(p => p.name === 'Eyebrow');
-    const blinkParam = EXPRESSION_PARAMS.find(p => p.name === 'Blink');
-
-    if (!smileParam || !eyebrowParam || !blinkParam) return;
-
-    const smileInput = document.getElementById(`param-${smileParam.index}`);
-    const smileVal = document.getElementById(`val-${smileParam.index}`);
-    const eyebrowInput = document.getElementById(`param-${eyebrowParam.index}`);
-    const eyebrowVal = document.getElementById(`val-${eyebrowParam.index}`);
-    const blinkInput = document.getElementById(`param-${blinkParam.index}`);
-    const blinkVal = document.getElementById(`val-${blinkParam.index}`);
-
-    const startTime = performance.now();
-    const duration = 2000; // 2 seconds (longer)
-
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        
-        if (elapsed >= duration) {
-            smileInput.value = 0;
-            smileVal.textContent = "0";
-            eyebrowInput.value = 0;
-            eyebrowVal.textContent = "0";
-            blinkInput.value = 0;
-            blinkVal.textContent = "0";
-            scheduleUpdate();
-            return;
-        }
-        
-        let smileValue, eyebrowValue, blinkValue;
-        
+    runAnimation(2000, (elapsed, duration) => {
+        let smile, eyebrow, blink;
         if (elapsed < duration / 2) {
-            // Smile: 0 to 1.0
-            smileValue = (elapsed / (duration / 2)) * 1.0;
-            // Eyebrow: 0 to 3
-            eyebrowValue = (elapsed / (duration / 2)) * 3;
-            // Blink: 0 to 2 (Squint)
-            blinkValue = (elapsed / (duration / 2)) * 2;
+            const t = elapsed / (duration / 2);
+            smile = t * 1.0;
+            eyebrow = t * 3;
+            blink = t * 2;
         } else {
-            // Return
-            smileValue = 1.0 - ((elapsed - duration / 2) / (duration / 2)) * 1.0;
-            eyebrowValue = 3 - ((elapsed - duration / 2) / (duration / 2)) * 3;
-            blinkValue = 2 - ((elapsed - duration / 2) / (duration / 2)) * 2;
+            const t = (elapsed - duration / 2) / (duration / 2);
+            smile = 1.0 - t * 1.0;
+            eyebrow = 3 - t * 3;
+            blink = 2 - t * 2;
         }
-        
-        smileInput.value = smileValue;
-        smileVal.textContent = smileValue.toFixed(2);
-        
-        eyebrowInput.value = eyebrowValue;
-        eyebrowVal.textContent = eyebrowValue.toFixed(1);
-
-        blinkInput.value = blinkValue;
-        blinkVal.textContent = blinkValue.toFixed(1);
-        
-        scheduleUpdate();
-        
-        requestAnimationFrame(update);
-    }
-    
-    requestAnimationFrame(update);
+        setParamValue('Smile', smile);
+        setParamValue('Eyebrow', eyebrow);
+        setParamValue('Blink', blink);
+    }, () => {
+        setParamValue('Smile', 0);
+        setParamValue('Eyebrow', 0);
+        setParamValue('Blink', 0);
+    });
 }
 
 function animateWow() {
-    if (!window.uploadedFilename) return;
-
-    const blinkParam = EXPRESSION_PARAMS.find(p => p.name === 'Blink');
-    const eyebrowParam = EXPRESSION_PARAMS.find(p => p.name === 'Eyebrow');
-    const aaaParam = EXPRESSION_PARAMS.find(p => p.name === 'AAA');
-
-    if (!blinkParam || !eyebrowParam || !aaaParam) return;
-
-    const blinkInput = document.getElementById(`param-${blinkParam.index}`);
-    const blinkVal = document.getElementById(`val-${blinkParam.index}`);
-    const eyebrowInput = document.getElementById(`param-${eyebrowParam.index}`);
-    const eyebrowVal = document.getElementById(`val-${eyebrowParam.index}`);
-    const aaaInput = document.getElementById(`param-${aaaParam.index}`);
-    const aaaVal = document.getElementById(`val-${aaaParam.index}`);
-
-    const startTime = performance.now();
-    const duration = 2000; // 2 seconds
-
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        
-        if (elapsed >= duration) {
-            // Reset to 0
-            blinkInput.value = 0;
-            blinkVal.textContent = "0";
-            eyebrowInput.value = 0;
-            eyebrowVal.textContent = "0";
-            aaaInput.value = 0;
-            aaaVal.textContent = "0";
-            scheduleUpdate();
-            return;
-        }
-        
-        let blinkValue, eyebrowValue, aaaValue;
-        
+    runAnimation(2000, (elapsed, duration) => {
+        let blink, eyebrow, aaa;
         if (elapsed < duration / 2) {
-            // First half: Go to target
-            // Blink: 0 to 4
-            blinkValue = (elapsed / (duration / 2)) * 4;
-            // Eyebrow: 0 to 13
-            eyebrowValue = (elapsed / (duration / 2)) * 13;
-            // AAA: 0 to 30
-            aaaValue = (elapsed / (duration / 2)) * 30;
+            const t = elapsed / (duration / 2);
+            blink = t * 4;
+            eyebrow = t * 13;
+            aaa = t * 30;
         } else {
-            // Second half: Return to 0
-            // Blink: 4 to 0
-            blinkValue = 4 - ((elapsed - duration / 2) / (duration / 2)) * 4;
-            // Eyebrow: 13 to 0
-            eyebrowValue = 13 - ((elapsed - duration / 2) / (duration / 2)) * 13;
-            // AAA: 30 to 0
-            aaaValue = 30 - ((elapsed - duration / 2) / (duration / 2)) * 30;
+            const t = (elapsed - duration / 2) / (duration / 2);
+            blink = 4 - t * 4;
+            eyebrow = 13 - t * 13;
+            aaa = 30 - t * 30;
         }
-        
-        blinkInput.value = blinkValue;
-        blinkVal.textContent = blinkValue.toFixed(1);
-        
-        eyebrowInput.value = eyebrowValue;
-        eyebrowVal.textContent = eyebrowValue.toFixed(1);
-        
-        aaaInput.value = aaaValue;
-        aaaVal.textContent = aaaValue.toFixed(1);
-        
-        scheduleUpdate();
-        
-        requestAnimationFrame(update);
-    }
-    
-    requestAnimationFrame(update);
+        setParamValue('Blink', blink);
+        setParamValue('Eyebrow', eyebrow);
+        setParamValue('AAA', aaa);
+    }, () => {
+        setParamValue('Blink', 0);
+        setParamValue('Eyebrow', 0);
+        setParamValue('AAA', 0);
+    });
 }
 
-
 function animateDisgust() {
-    if (!window.uploadedFilename) return;
-
-    const eeeParam = EXPRESSION_PARAMS.find(p => p.name === 'EEE');
-    const eyebrowParam = EXPRESSION_PARAMS.find(p => p.name === 'Eyebrow');
-    const blinkParam = EXPRESSION_PARAMS.find(p => p.name === 'Blink');
-
-    if (!eeeParam || !eyebrowParam || !blinkParam) return;
-
-    const eeeInput = document.getElementById(`param-${eeeParam.index}`);
-    const eeeVal = document.getElementById(`val-${eeeParam.index}`);
-    const eyebrowInput = document.getElementById(`param-${eyebrowParam.index}`);
-    const eyebrowVal = document.getElementById(`val-${eyebrowParam.index}`);
-    const blinkInput = document.getElementById(`param-${blinkParam.index}`);
-    const blinkVal = document.getElementById(`val-${blinkParam.index}`);
-
-    const startTime = performance.now();
-    const duration = 2000; // 2 seconds
-
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        
-        if (elapsed >= duration) {
-            eeeInput.value = 0;
-            eeeVal.textContent = "0";
-            eyebrowInput.value = 0;
-            eyebrowVal.textContent = "0";
-            blinkInput.value = 0;
-            blinkVal.textContent = "0";
-            scheduleUpdate();
-            return;
-        }
-        
-        let eeeValue, eyebrowValue, blinkValue;
-        
+    runAnimation(2000, (elapsed, duration) => {
+        let eee, eyebrow, blink;
         if (elapsed < duration / 2) {
-            // EEE: 0 to 15
-            eeeValue = (elapsed / (duration / 2)) * 15;
-            // Eyebrow: 0 to -10 (Frown)
-            eyebrowValue = (elapsed / (duration / 2)) * -10;
-            // Blink: 0 to 4 (Squint)
-            blinkValue = (elapsed / (duration / 2)) * 4;
+            const t = elapsed / (duration / 2);
+            eee = t * 15;
+            eyebrow = t * -10;
+            blink = t * 4;
         } else {
-            // Return
-            eeeValue = 15 - ((elapsed - duration / 2) / (duration / 2)) * 15;
-            eyebrowValue = -10 - ((elapsed - duration / 2) / (duration / 2)) * -10;
-            blinkValue = 4 - ((elapsed - duration / 2) / (duration / 2)) * 4;
+            const t = (elapsed - duration / 2) / (duration / 2);
+            eee = 15 - t * 15;
+            eyebrow = -10 - t * -10;
+            blink = 4 - t * 4;
         }
-        
-        eeeInput.value = eeeValue;
-        eeeVal.textContent = eeeValue.toFixed(1);
-        
-        eyebrowInput.value = eyebrowValue;
-        eyebrowVal.textContent = eyebrowValue.toFixed(1);
-
-        blinkInput.value = blinkValue;
-        blinkVal.textContent = blinkValue.toFixed(1);
-        
-        scheduleUpdate();
-        requestAnimationFrame(update);
-    }
-    
-    requestAnimationFrame(update);
+        setParamValue('EEE', eee);
+        setParamValue('Eyebrow', eyebrow);
+        setParamValue('Blink', blink);
+    }, () => {
+        setParamValue('EEE', 0);
+        setParamValue('Eyebrow', 0);
+        setParamValue('Blink', 0);
+    });
 }
 
 function animateYes() {
-    if (!window.uploadedFilename) return;
-
-    const pitchParam = EXPRESSION_PARAMS.find(p => p.name === 'Rotate Pitch');
-    if (!pitchParam) return;
-
-    const pitchInput = document.getElementById(`param-${pitchParam.index}`);
-    const pitchVal = document.getElementById(`val-${pitchParam.index}`);
-
-    const startTime = performance.now();
-    const duration = 1000; 
-
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        
-        if (elapsed >= duration) {
-            pitchInput.value = 0;
-            pitchVal.textContent = "0";
-            scheduleUpdate();
-            return;
-        }
-        
-        const value = Math.sin((elapsed / duration) * Math.PI * 4) * 15;
-        
-        pitchInput.value = value;
-        pitchVal.textContent = value.toFixed(1);
-        
-        scheduleUpdate();
-        requestAnimationFrame(update);
-    }
-    requestAnimationFrame(update);
+    runAnimation(2000, (elapsed, duration) => {
+        const val = Math.sin((elapsed / duration) * Math.PI * 4) * 15;
+        setParamValue('Rotate Pitch', val);
+    }, () => {
+        setParamValue('Rotate Pitch', 0);
+    });
 }
 
 function animateNo() {
-    if (!window.uploadedFilename) return;
-
-    const yawParam = EXPRESSION_PARAMS.find(p => p.name === 'Rotate Yaw');
-    if (!yawParam) return;
-
-    const yawInput = document.getElementById(`param-${yawParam.index}`);
-    const yawVal = document.getElementById(`val-${yawParam.index}`);
-
-    const startTime = performance.now();
-    const duration = 1000; 
-
-    function update(currentTime) {
-        const elapsed = currentTime - startTime;
-        
-        if (elapsed >= duration) {
-            yawInput.value = 0;
-            yawVal.textContent = "0";
-            scheduleUpdate();
-            return;
-        }
-        
-        const value = Math.sin((elapsed / duration) * Math.PI * 4) * 20;
-        
-        yawInput.value = value;
-        yawVal.textContent = value.toFixed(1);
-        
-        scheduleUpdate();
-        requestAnimationFrame(update);
-    }
-    requestAnimationFrame(update);
+    runAnimation(2000, (elapsed, duration) => {
+        const val = Math.sin((elapsed / duration) * Math.PI * 4) * 20;
+        setParamValue('Rotate Yaw', val);
+    }, () => {
+        setParamValue('Rotate Yaw', 0);
+    });
 }
 
 async function handleImageUpload(e) {
@@ -906,10 +933,10 @@ async function queuePrompt(isAuto = false) {
     // Construct the prompt based on current slider values
     const prompt = JSON.parse(JSON.stringify(workflowTemplate)); // Deep copy
 
-    // Update LoadImage node (15)
-    prompt["15"].inputs.image = window.uploadedFilename;
+    // Update LoadImage node
+    prompt[NODES.LOAD_IMAGE].inputs.image = window.uploadedFilename;
 
-    // Update ExpressionEditor node (14)
+    // Update ExpressionEditor node
     // Note: The keys in the 'inputs' object must match what the node expects
     // We map our array index to the specific parameter names
     const paramKeys = [
@@ -921,7 +948,7 @@ async function queuePrompt(isAuto = false) {
     EXPRESSION_PARAMS.forEach((param, i) => {
         const value = parseFloat(document.getElementById(`param-${param.index}`).value);
         const key = paramKeys[i];
-        prompt["14"].inputs[key] = value;
+        prompt[NODES.EXPRESSION_EDITOR].inputs[key] = value;
     });
 
     try {

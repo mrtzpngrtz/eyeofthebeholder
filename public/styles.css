@@ -135,7 +135,6 @@ body:hover #customCursor { opacity: 1; }
     font-family: var(--font-main);
     font-weight: 700;
     font-size: 0.7em;
-    color: 888; /* This was implicit, now explicitly keeping it or changing to var if we had one */
     color: #888; 
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -234,6 +233,16 @@ body:hover #customCursor { opacity: 1; }
 .segmented-control input[type="radio"]:checked + label {
     background: var(--text-primary);
     color: var(--bg-primary);
+}
+
+/* Calibration Group */
+.calibration-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 5px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-primary);
 }
 
 /* Toggle Row */

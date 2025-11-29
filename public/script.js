@@ -18,6 +18,12 @@ let inputMode = 'mouse'; // 'mouse' (drag), 'hover', 'osc', or 'random'
 let oscX = 0.5;
 let oscY = 0.5;
 
+// Calibration State
+let calibCenterX = 0.5;
+let calibCenterY = 0.5;
+let calibMoveX = 1.0;
+let calibMoveY = 1.0;
+
 // Random Mode State
 let randomModeInterval;
 let randomExpressionInterval;
@@ -232,9 +238,15 @@ function updateFromOsc() {
 
     if (inputMode !== 'osc') return;
 
+    // Apply Calibration
+    // Formula: (Input - CenterOffset) * Scale + 0.5
+    // This maps the user-defined center input to 0.5 (screen center)
+    const calibratedX = (oscX - calibCenterX) * calibMoveX + 0.5;
+    const calibratedY = (oscY - calibCenterY) * calibMoveY + 0.5;
+
     // Map normalized (0-1) to screen coordinates
-    const screenX = oscX * window.innerWidth;
-    const screenY = oscY * window.innerHeight;
+    const screenX = calibratedX * window.innerWidth;
+    const screenY = calibratedY * window.innerHeight;
     
     updateTargetPosition(screenX, screenY);
     updateGazeParams(screenX, screenY);
@@ -366,6 +378,41 @@ function setupEventListeners() {
     if (menuBtn && sidebar) {
         menuBtn.addEventListener('click', () => {
             sidebar.classList.toggle('open');
+        });
+    }
+
+    // Calibration Listeners
+    const cCX = document.getElementById('calibCenterX');
+    const cCY = document.getElementById('calibCenterY');
+    const cMX = document.getElementById('calibMoveX');
+    const cMY = document.getElementById('calibMoveY');
+
+    if (cCX) {
+        cCX.addEventListener('input', (e) => {
+            calibCenterX = parseFloat(e.target.value);
+            document.getElementById('calibCenterXVal').textContent = calibCenterX.toFixed(2);
+            updateFromOsc(); // Live update
+        });
+    }
+    if (cCY) {
+        cCY.addEventListener('input', (e) => {
+            calibCenterY = parseFloat(e.target.value);
+            document.getElementById('calibCenterYVal').textContent = calibCenterY.toFixed(2);
+            updateFromOsc();
+        });
+    }
+    if (cMX) {
+        cMX.addEventListener('input', (e) => {
+            calibMoveX = parseFloat(e.target.value);
+            document.getElementById('calibMoveXVal').textContent = calibMoveX.toFixed(1);
+            updateFromOsc();
+        });
+    }
+    if (cMY) {
+        cMY.addEventListener('input', (e) => {
+            calibMoveY = parseFloat(e.target.value);
+            document.getElementById('calibMoveYVal').textContent = calibMoveY.toFixed(1);
+            updateFromOsc();
         });
     }
 

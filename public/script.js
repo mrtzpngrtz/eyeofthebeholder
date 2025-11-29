@@ -291,29 +291,43 @@ function setupEventListeners() {
 
     // Input Source Switching
     const inputRadios = document.getElementsByName('inputSource');
+    
+    // Helper to update UI based on mode
+    function updateInputModeUI() {
+        // Update cursor interactivity
+        const cursor = document.getElementById('customCursor');
+        if (cursor) {
+            cursor.style.pointerEvents = inputMode === 'mouse' ? 'auto' : 'none';
+        }
+
+        // Random Speed Group
+        const randomGroup = document.getElementById('randomSpeedGroup');
+        if (randomGroup) {
+            randomGroup.style.display = inputMode === 'random' ? 'block' : 'none';
+        }
+
+        // Calibration Group (Only for OSC)
+        const calibGroup = document.querySelector('.calibration-group');
+        if (calibGroup) {
+            calibGroup.style.display = inputMode === 'osc' ? 'flex' : 'none';
+        }
+
+        if (inputMode === 'random') {
+            startRandomMode();
+        } else {
+            stopRandomMode();
+        }
+    }
+
+    // Initialize UI state
+    updateInputModeUI();
+
     inputRadios.forEach(radio => {
         radio.addEventListener('change', (e) => {
             if (e.target.checked) {
                 inputMode = e.target.value;
                 console.log('Input mode switched to:', inputMode);
-                
-                // Update cursor interactivity
-                const cursor = document.getElementById('customCursor');
-                if (cursor) {
-                    // Only allow dragging in 'mouse' (drag) mode
-                    cursor.style.pointerEvents = inputMode === 'mouse' ? 'auto' : 'none';
-                }
-
-                const randomGroup = document.getElementById('randomSpeedGroup');
-                if (randomGroup) {
-                    randomGroup.style.display = inputMode === 'random' ? 'block' : 'none';
-                }
-
-                if (inputMode === 'random') {
-                    startRandomMode();
-                } else {
-                    stopRandomMode();
-                }
+                updateInputModeUI();
             }
         });
     });

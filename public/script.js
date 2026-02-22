@@ -35,6 +35,12 @@ let randomSpeed = 1.0;
 let randomTimeAccumulator = 0;
 let lastRandomFrameTime = 0;
 
+// Grid Generation State
+let isGridGenerating = false;
+let gridRow = 0;
+let gridCol = 0;
+const GRID_SIZE = 6;
+
 // Expression Editor Parameters Mapping
 // Updated based on actual node definition
 const EXPRESSION_PARAMS = [
@@ -155,6 +161,10 @@ function setupWebSocket() {
                     // Add timestamp to force reload if filename is static
                     const imageUrl = `${COMFY_API}/view?filename=${img.filename}&type=${img.type}&subfolder=${img.subfolder}&t=${Date.now()}`;
                     document.getElementById('resultImage').src = imageUrl;
+
+                    if (isGridGenerating) {
+                        saveGridImage(img);
+                    }
                 }
             }
         }
@@ -392,6 +402,22 @@ function setupEventListeners() {
     if (menuBtn && sidebar) {
         menuBtn.addEventListener('click', () => {
             sidebar.classList.toggle('open');
+        });
+    }
+
+    // Grid Generation Listeners
+    const generateGridBtn = document.getElementById('generateGridBtn');
+    if (generateGridBtn) {
+        generateGridBtn.addEventListener('click', () => {
+            if (!isGridGenerating) {
+                if (!window.uploadedFilename) {
+                    alert('Please upload an image first');
+                    return;
+                }
+                startGridGeneration();
+            } else {
+                stopGridGeneration();
+            }
         });
     }
 
@@ -712,16 +738,24 @@ function updateTargetPosition(x, y) {
 function updateGazeParams(x, y) {
     if (!window.uploadedFilename) return;
 
-    const width = window.innerWidth;
-    const height = window.innerHeight;
+    const preview = document.querySelector('.preview-section');
+    const rect = preview ? preview.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
     
-    // Map X to -15 to 15 (Pupils) and -10 to 10 (Yaw)
-    const pupilX = ((x / width) * 30) - 15;
-    const rotateYaw = ((x / width) * 20) - 10;
+    // Calculate normalized position within the active preview area (0 to 1)
+    let normX = (x - rect.left) / rect.width;
+    let normY = (y - rect.top) / rect.height;
     
-    // Map Y to 15 to -15 (Pupils) and -10 to 10 (Pitch)
-    const pupilY = 15 - ((y / height) * 30);
-    const rotatePitch = ((y / height) * 20) - 10;
+    // Clamp to 0-1 range so UI elements outside the preview don't push eyes beyond limits
+    normX = Math.max(0, Math.min(1, normX));
+    normY = Math.max(0, Math.min(1, normY));
+    
+    // Map normX to -15 to 15 (Pupils) and -10 to 10 (Yaw)
+    const pupilX = (normX * 30) - 15;
+    const rotateYaw = (normX * 20) - 10;
+    
+    // Map normY to 15 to -15 (Pupils) and -10 to 10 (Pitch)
+    const pupilY = 15 - (normY * 30);
+    const rotatePitch = (normY * 20) - 10;
 
     // Update Sliders
     const pX = EXPRESSION_PARAMS.find(p => p.name === 'Pupil X');
@@ -1043,6 +1077,90 @@ async function queuePrompt(isAuto = false) {
             processQueue();
         }, 1000);
     }
+}
+
+async function saveGridImage(img) {
+    try {
+        const response = await fetch('/api/save-grid-image', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                filename: img.filename,
+                type: img.type,
+                subfolder: img.subfolder,
+                row: gridRow,
+                col: gridCol
+            })
+        });
+        
+        if (!response.ok) throw new Error('Save failed');
+        
+        updateStatus(`Saved grid image ${gridRow}_${gridCol}`, 'success');
+        
+        // Move to next grid position
+        gridCol++;
+        if (gridCol >= GRID_SIZE) {
+            gridCol = 0;
+            gridRow++;
+        }
+        
+        if (gridRow >= GRID_SIZE) {
+            updateStatus('Grid generation complete!', 'success');
+            stopGridGeneration();
+        } else {
+            // Give a generous delay to ensure ComfyUI and the browser are fully ready for the next request
+            setTimeout(generateNextGridImage, 1000);
+        }
+    } catch (err) {
+        console.error('Error saving grid image:', err);
+        updateStatus('Error saving grid image, stopping generation', 'error');
+        stopGridGeneration();
+    }
+}
+
+function startGridGeneration() {
+    isGridGenerating = true;
+    gridRow = 0;
+    gridCol = 0;
+    
+    const generateGridBtn = document.getElementById('generateGridBtn');
+    if (generateGridBtn) {
+        generateGridBtn.textContent = 'Stop Grid Generation';
+        generateGridBtn.style.backgroundColor = '#f44336';
+    }
+    
+    updateStatus('Starting grid generation...', 'info');
+    generateNextGridImage();
+}
+
+function stopGridGeneration() {
+    isGridGenerating = false;
+    
+    const generateGridBtn = document.getElementById('generateGridBtn');
+    if (generateGridBtn) {
+        generateGridBtn.textContent = 'Generate 6x6 Grid';
+        generateGridBtn.style.backgroundColor = '#4CAF50';
+    }
+}
+
+function generateNextGridImage() {
+    if (!isGridGenerating) return;
+    
+    const preview = document.querySelector('.preview-section');
+    const rect = preview ? preview.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    
+    // Calculate normalized X and Y (0 to 1) for this cell
+    // Grid maps row (y) and col (x) from 0 to 5. 
+    // We want to map these to 0.0 to 1.0 coordinates to simulate mouse positions
+    const normalizedX = gridCol / (GRID_SIZE - 1);
+    const normalizedY = gridRow / (GRID_SIZE - 1);
+    
+    // Map to screen coordinates within the active area
+    const screenX = rect.left + (normalizedX * rect.width);
+    const screenY = rect.top + (normalizedY * rect.height);
+    
+    updateTargetPosition(screenX, screenY);
+    updateGazeParams(screenX, screenY);
 }
 
 function updateStatus(text, type = 'info') {

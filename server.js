@@ -87,6 +87,31 @@ proxy.on('error', (err, req, res) => {
 });
 
 // Handle API routes
+app.post('/api/save-grid-image', express.json({ limit: '50mb' }), async (req, res) => {
+    try {
+        const { filename, type, subfolder, row, col } = req.body;
+        
+        // Fetch image from ComfyUI
+        const imageUrl = `${COMFY_API}/view?filename=${filename}&type=${type}&subfolder=${subfolder}`;
+        const response = await fetch(imageUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        
+        const targetDir = path.join(__dirname, 'public', 'grid_images');
+        if (!fs.existsSync(targetDir)) {
+            fs.mkdirSync(targetDir, { recursive: true });
+        }
+        
+        const targetFile = path.join(targetDir, `row_${row}_col_${col}.png`);
+        fs.writeFileSync(targetFile, buffer);
+        
+        res.json({ success: true, file: `row_${row}_col_${col}.png` });
+    } catch (err) {
+        console.error('Error saving grid image:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // We use a middleware at root level to check paths so that req.url is not modified
 // (app.use('/path', ...) would strip '/path' from req.url)
 app.use(async (req, res, next) => {

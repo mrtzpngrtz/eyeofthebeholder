@@ -35,6 +35,12 @@ It also supports **OSC (Open Sound Control)** input, allowing you to drive the g
 2. Use the sliders or quick action buttons (WINK, KISS, SMILE, WOW) to change expressions.
 3. Drag the white circle on the screen to control the gaze direction.
 
+### 6x6 Grid Generation & Preview
+You can automate the creation of a 36-frame (6x6) interactive sprite set:
+1. Ensure your image is uploaded and looks correct.
+2. Click **Generate 6x6 Grid** in the control panel. The system will automatically map 36 coordinate points across the active preview area, generate each image through ComfyUI, and save them to `public/grid_images/`.
+3. Once complete, navigate to `http://localhost:3000/preview.html`. This standalone page will preload the 36 images and perfectly track your mouse position using the generated assets, creating an interactive "eyes follow the mouse" effect without needing a GPU!
+
 ### OSC & Kinect Tracking
 You can control the gaze direction using a Kinect (or any OSC source).
 

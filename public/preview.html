@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eye of the Beholder - Grid Preview</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #eyeImage {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .loading {
+            position: absolute;
+            color: white;
+            font-family: sans-serif;
+            font-size: 1.2rem;
+            z-index: 10;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loadingText" class="loading">Loading Grid...</div>
+    <img id="eyeImage" src="grid_images/row_3_col_3.png" alt="Eye Preview" style="opacity: 0; transition: opacity 0.3s ease;">
+    
+    <script>
+        const GRID_SIZE = 6;
+        const eyeImage = document.getElementById('eyeImage');
+        const loadingText = document.getElementById('loadingText');
+
+        // Preload all 36 images
+        let loadedCount = 0;
+        const totalImages = GRID_SIZE * GRID_SIZE;
+        const preloadedImages = [];
+
+        for (let row = 0; row < GRID_SIZE; row++) {
+            preloadedImages[row] = [];
+            for (let col = 0; col < GRID_SIZE; col++) {
+                const img = new Image();
+                img.onload = () => {
+                    loadedCount++;
+                    if (loadedCount === totalImages) {
+                        loadingText.style.display = 'none';
+                        eyeImage.style.opacity = 1;
+                    }
+                };
+                img.onerror = () => {
+                    loadedCount++; // prevent hanging
+                    console.error('Failed to load image:', img.src);
+                };
+                img.src = `grid_images/row_${row}_col_${col}.png`;
+                preloadedImages[row][col] = img;
+            }
+        }
+
+        document.addEventListener('mousemove', (e) => {
+            if (loadedCount < totalImages) return; // Don't track if not fully loaded
+
+            // Get mouse position relative to viewport
+            const x = e.clientX;
+            const y = e.clientY;
+            
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            // Calculate which grid cell the mouse is in
+            // Clamp to avoid going out of bounds
+            let col = Math.floor((x / w) * GRID_SIZE);
+            let row = Math.floor((y / h) * GRID_SIZE);
+            
+            if (col >= GRID_SIZE) col = GRID_SIZE - 1;
+            if (row >= GRID_SIZE) row = GRID_SIZE - 1;
+            if (col < 0) col = 0;
+            if (row < 0) row = 0;
+
+            // Set corresponding image
+            const imagePath = `grid_images/row_${row}_col_${col}.png`;
+            if (eyeImage.getAttribute('src') !== imagePath) {
+                eyeImage.src = imagePath;
+            }
+        });
+    </script>
+</body>
+</html>
